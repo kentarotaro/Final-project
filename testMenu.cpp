@@ -1,7 +1,10 @@
-#include <iostream>
-#include <string>
-#include <iomanip>
-#include <fstream>
+#include <iostream>	// Import os
+#include <string>	// Import string
+#include <iomanip>	// Import iomanip untuk setw (weidth)
+#include <fstream>	// Import fstream untuk push ke file txt
+#include <ctime>  	// Import time
+#include <cstdio>	
+#include <limits>
 
 using namespace std;
 
@@ -15,6 +18,15 @@ struct data {
     int harga;
     int stock;
 };
+
+struct Pendapatan {
+    int totalHariIni;
+    int totalBulanIni;
+    string tanggalTerakhir;  // Format: DD-MM-YYYY
+    string bulanTerakhir;    // Format: MM-YYYY
+};
+
+Pendapatan pendapatan = {0, 0, "", ""};
 
 const int MAX_DATA = 100;
 
@@ -85,13 +97,33 @@ void createMakanan(data makanan[], int *jumlahData, int maxSize) {
     }
     
     int jumlahTambah;
-    cout << "Jumlah data yang ingin ditambahkan: ";
-    cin >> jumlahTambah;
+    bool inputValid = false;
     
-    if (*jumlahData + jumlahTambah > maxSize) {
-        cout << "\n[!] Tidak cukup ruang! Hanya bisa menambahkan " 
-             << (maxSize - *jumlahData) << " data lagi.\n\n";
-        return;
+    // Validasi input jumlah data
+    while (!inputValid) {
+        cout << "Jumlah data yang ingin ditambahkan (0 untuk batal): ";
+        
+        if (cin >> jumlahTambah) {
+            if (jumlahTambah == 0) {
+                cout << "\n[!] Penambahan data dibatalkan.\n\n";
+                return;
+            }
+            
+            if (jumlahTambah > 0) {
+                if (*jumlahData + jumlahTambah > maxSize) {
+                    cout << "\n[!] Tidak cukup ruang! Hanya bisa menambahkan " 
+                         << (maxSize - *jumlahData) << " data lagi.\n\n";
+                } else {
+                    inputValid = true;
+                }
+            } else {
+                cout << "[?] Jumlah harus lebih dari 0!\n\n";
+            }
+        } else {
+            cout << "[?] Input tidak valid! Harap masukkan angka.\n\n";
+            cin.clear();
+            cin.ignore(10000, '\n');
+        }
     }
     
     cin.ignore(); // Bersihkan buffer
@@ -105,32 +137,87 @@ void createMakanan(data makanan[], int *jumlahData, int maxSize) {
         bool kodeValid = false;
         while (!kodeValid) {
             cout << "Masukkan Kode: ";
-            cin >> makanan[index].kode;
             
-            // Cek apakah kode sudah ada
-            kodeValid = true;
-            for (int j = 0; j < *jumlahData + i; j++) {
-                if (makanan[j].kode == makanan[index].kode) {
-                    cout << "[?] Kode sudah digunakan! Masukkan kode lain.\n";
-                    kodeValid = false;
-                    break;
+            if (cin >> makanan[index].kode) {
+                // Cek apakah kode sudah ada
+                kodeValid = true;
+                for (int j = 0; j < *jumlahData + i; j++) {
+                    if (makanan[j].kode == makanan[index].kode) {
+                        cout << "[?] Kode sudah digunakan! Masukkan kode lain.\n";
+                        kodeValid = false;
+                        break;
+                    }
                 }
+            } else {
+                cout << "[?] Input tidak valid! Harap masukkan angka.\n";
+                cin.clear();
+                cin.ignore(10000, '\n');
             }
         }
         
         cin.ignore(); // Bersihkan buffer setelah input integer
         
-        cout << "Masukkan Nama: ";
-        getline(cin, makanan[index].nama);
+        // Input Nama
+        bool namaValid = false;
+        while (!namaValid) {
+            cout << "Masukkan Nama: ";
+            getline(cin, makanan[index].nama);
+            
+            if (makanan[index].nama.length() > 0) {
+                namaValid = true;
+            } else {
+                cout << "[?] Nama tidak boleh kosong!\n";
+            }
+        }
         
-        cout << "Masukkan Kategori: ";
-        getline(cin, makanan[index].kategori);
+        // Input Kategori
+        bool kategoriValid = false;
+        while (!kategoriValid) {
+            cout << "Masukkan Kategori: ";
+            getline(cin, makanan[index].kategori);
+            
+            if (makanan[index].kategori.length() > 0) {
+                kategoriValid = true;
+            } else {
+                cout << "[?] Kategori tidak boleh kosong!\n";
+            }
+        }
         
-        cout << "Masukkan Harga: Rp ";
-        cin >> makanan[index].harga;
+        // Input Harga
+        bool hargaValid = false;
+        while (!hargaValid) {
+            cout << "Masukkan Harga: Rp ";
+            
+            if (cin >> makanan[index].harga) {
+                if (makanan[index].harga >= 0) {
+                    hargaValid = true;
+                } else {
+                    cout << "[?] Harga tidak boleh negatif!\n";
+                }
+            } else {
+                cout << "[?] Input tidak valid! Harap masukkan angka.\n";
+                cin.clear();
+                cin.ignore(10000, '\n');
+            }
+        }
         
-        cout << "Masukkan Stock: ";
-        cin >> makanan[index].stock;
+        // Input Stock
+        bool stockValid = false;
+        while (!stockValid) {
+            cout << "Masukkan Stock: ";
+            
+            if (cin >> makanan[index].stock) {
+                if (makanan[index].stock >= 0) {
+                    stockValid = true;
+                } else {
+                    cout << "[?] Stock tidak boleh negatif!\n";
+                }
+            } else {
+                cout << "[?] Input tidak valid! Harap masukkan angka.\n";
+                cin.clear();
+                cin.ignore(10000, '\n');
+            }
+        }
         
         cin.ignore(); // Bersihkan buffer untuk iterasi berikutnya
         
@@ -228,31 +315,48 @@ void sortMakanan(data makanan[], int jumlahData) {
     }
     
     int pilihan;
-    cout << "Urutkan berdasarkan:\n";
-    cout << "1. Harga (Termurah - Termahal)\n";
-    cout << "2. Harga (Termahal - Termurah)\n";
-    cout << "3. Kode (Kecil - Besar)\n";
-    cout << "4. Nama (A - Z)\n";
-    cout << "0. Batal\n";
-    cout << "-------------------------------------\n";
-    cout << "Pilihan: ";
-    cin >> pilihan;
+    bool pilihanValid = false;
+    
+    // Validasi input pilihan
+    while (!pilihanValid) {
+        cout << "Urutkan berdasarkan:\n";
+        cout << "1. Harga (Termurah - Termahal)\n";
+        cout << "2. Harga (Termahal - Termurah)\n";
+        cout << "3. Kode (Kecil - Besar)\n";
+        cout << "4. Nama (A - Z)\n";
+        cout << "0. Batal\n";
+        cout << "-------------------------------------\n";
+        cout << "Pilihan: ";
+        
+        if (cin >> pilihan) {
+            if (pilihan >= 0 && pilihan <= 4) {
+                pilihanValid = true;
+            } else {
+                cout << "\n[?] Pilihan tidak valid! Pilih 0-4.\n\n";
+            }
+        } else {
+            cout << "\n[?] Input tidak valid! Harap masukkan angka.\n\n";
+            cin.clear();
+            cin.ignore(10000, '\n');
+        }
+    }
     
     if (pilihan == 0) {
         cout << "\n[!] Pengurutan dibatalkan.\n\n";
         return;
     }
     
-    // Backup data untuk bisa dikembalikan jika perlu
+    // Tampilkan loading
     cout << "\n[...] Mengurutkan data...\n";
     
     // Lakukan sorting berdasarkan pilihan
-    // Untuk pilihan 1: sort by harga ascending (sudah ada di merge sort)
     if (pilihan == 1) {
+        // Sort by harga ascending (Merge Sort)
         mergeSortMakanan(makanan, 0, jumlahData - 1);
         cout << "[?] Data berhasil diurutkan berdasarkan harga (termurah - termahal)!\n\n";
     } 
     else if (pilihan == 2) {
+        // Sort by harga descending
         mergeSortMakanan(makanan, 0, jumlahData - 1);
         // Reverse array untuk descending
         for (int i = 0; i < jumlahData / 2; i++) {
@@ -263,7 +367,7 @@ void sortMakanan(data makanan[], int jumlahData) {
         cout << "[?] Data berhasil diurutkan berdasarkan harga (termahal - termurah)!\n\n";
     }
     else if (pilihan == 3) {
-        // Bubble sort sederhana untuk kode (karena integer, tidak perlu merge sort)
+        // Bubble sort untuk kode (integer)
         for (int i = 0; i < jumlahData - 1; i++) {
             for (int j = 0; j < jumlahData - i - 1; j++) {
                 if (makanan[j].kode > makanan[j + 1].kode) {
@@ -287,10 +391,6 @@ void sortMakanan(data makanan[], int jumlahData) {
             }
         }
         cout << "[?] Data berhasil diurutkan berdasarkan nama (A - Z)!\n\n";
-    }
-    else {
-        cout << "\n[?] Pilihan tidak valid!\n\n";
-        return;
     }
     
     // Tampilkan hasil sorting
@@ -330,33 +430,173 @@ void searchKode(const data makanan[], int jumlahBarang) {
     clearScreen();
     cout << "\n=============== PENCARIAN DATA ===============\n\n";
     
-    int kodeCari;
-    cout << "Masukkan kode yang dicari: ";
-    cin >> kodeCari;
+    if (jumlahBarang == 0) {
+        cout << "[!] Tidak ada data untuk dicari!\n\n";
+        return;
+    }
+    
+    int pilihan;
+    bool pilihanValid = false;
+    
+    // Menu pilihan metode pencarian
+    while (!pilihanValid) {
+        cout << "Pilih metode pencarian:\n";
+        cout << "1. Cari berdasarkan Kode\n";
+        cout << "2. Cari berdasarkan Nama\n";
+        cout << "3. Cari berdasarkan Kategori\n";
+        cout << "0. Batal\n";
+        cout << "-------------------------------------\n";
+        cout << "Masukkan pilihan: ";
+        
+        if (cin >> pilihan) {
+            if (pilihan >= 0 && pilihan <= 3) {
+                pilihanValid = true;
+            } else {
+                cout << "\n[?] Pilihan tidak valid! Pilih 0-3.\n\n";
+            }
+        } else {
+            cout << "\n[?] Input tidak valid! Harap masukkan angka.\n\n";
+            cin.clear();
+            cin.ignore(10000, '\n');
+        }
+    }
+    
+    if (pilihan == 0) {
+        cout << "\n[!] Pencarian dibatalkan.\n\n";
+        return;
+    }
+    
+    cin.ignore(); // Bersihkan buffer
     
     bool ditemukan = false;
+    int jumlahDitemukan = 0;
     
-    for (int i = 0; i < jumlahBarang; i++) {
-        if (makanan[i].kode == kodeCari) {
-            cout << "\n[?] Data ditemukan!\n";
-            tampilkanHeaderTabel();
-            tampilkanBarisTabel(makanan[i], 1);
+    if (pilihan == 1) {
+        // Pencarian berdasarkan Kode
+        int kodeCari;
+        bool inputValid = false;
+        
+        while (!inputValid) {
+            cout << "\nMasukkan kode yang dicari (0 untuk batal): ";
+            
+            if (cin >> kodeCari) {
+                inputValid = true;
+                
+                if (kodeCari == 0) {
+                    cout << "\n[!] Pencarian dibatalkan.\n\n";
+                    return;
+                }
+            } else {
+                cout << "\n[?] Input tidak valid! Harap masukkan angka.\n";
+                cin.clear();
+                cin.ignore(10000, '\n');
+            }
+        }
+        
+        for (int i = 0; i < jumlahBarang; i++) {
+            if (makanan[i].kode == kodeCari) {
+                if (!ditemukan) {
+                    cout << "\n[?] Data ditemukan!\n";
+                    tampilkanHeaderTabel();
+                }
+                tampilkanBarisTabel(makanan[i], jumlahDitemukan + 1);
+                jumlahDitemukan++;
+                ditemukan = true;
+            }
+        }
+        
+        if (ditemukan) {
             tampilkanFooterTabel();
             
-            cout << "\n--- Detail Lengkap ---\n";
-            cout << "Kode     : " << makanan[i].kode << endl;
-            cout << "Nama     : " << makanan[i].nama << endl;
-            cout << "Kategori : " << makanan[i].kategori << endl;
-            cout << "Harga    : Rp " << makanan[i].harga << endl;
-            cout << "Stock    : " << makanan[i].stock << " unit\n";
+            // Tampilkan detail lengkap (untuk pencarian kode, pasti hanya 1 hasil)
+            for (int i = 0; i < jumlahBarang; i++) {
+                if (makanan[i].kode == kodeCari) {
+                    cout << "\n--- Detail Lengkap ---\n";
+                    cout << "Kode     : " << makanan[i].kode << endl;
+                    cout << "Nama     : " << makanan[i].nama << endl;
+                    cout << "Kategori : " << makanan[i].kategori << endl;
+                    cout << "Harga    : Rp " << makanan[i].harga << endl;
+                    cout << "Stock    : " << makanan[i].stock << " unit\n";
+                    break;
+                }
+            }
+        }
+        
+    } else if (pilihan == 2) {
+        // Pencarian berdasarkan Nama
+        string namaCari;
+        cout << "\nMasukkan nama yang dicari: ";
+        getline(cin, namaCari);
+        
+        // Konversi ke lowercase untuk pencarian case-insensitive
+        for (int i = 0; i < jumlahBarang; i++) {
+            string namaLower = makanan[i].nama;
+            string cariLower = namaCari;
             
-            ditemukan = true;
-            break;
+            // Konversi ke lowercase
+            for (int j = 0; j < namaLower.length(); j++) {
+                namaLower[j] = tolower(namaLower[j]);
+            }
+            for (int j = 0; j < cariLower.length(); j++) {
+                cariLower[j] = tolower(cariLower[j]);
+            }
+            
+            // Cek apakah nama mengandung kata kunci
+            if (namaLower.find(cariLower) != string::npos) {
+                if (!ditemukan) {
+                    cout << "\n[?] Data ditemukan!\n";
+                    tampilkanHeaderTabel();
+                }
+                tampilkanBarisTabel(makanan[i], jumlahDitemukan + 1);
+                jumlahDitemukan++;
+                ditemukan = true;
+            }
+        }
+        
+        if (ditemukan) {
+            tampilkanFooterTabel();
+            cout << "\nTotal ditemukan: " << jumlahDitemukan << " item\n";
+        }
+        
+    } else if (pilihan == 3) {
+        // Pencarian berdasarkan Kategori
+        string kategoriCari;
+        cout << "\nMasukkan kategori yang dicari: ";
+        getline(cin, kategoriCari);
+        
+        // Konversi ke lowercase untuk pencarian case-insensitive
+        for (int i = 0; i < jumlahBarang; i++) {
+            string kategoriLower = makanan[i].kategori;
+            string cariLower = kategoriCari;
+            
+            // Konversi ke lowercase
+            for (int j = 0; j < kategoriLower.length(); j++) {
+                kategoriLower[j] = tolower(kategoriLower[j]);
+            }
+            for (int j = 0; j < cariLower.length(); j++) {
+                cariLower[j] = tolower(cariLower[j]);
+            }
+            
+            // Cek apakah kategori mengandung kata kunci
+            if (kategoriLower.find(cariLower) != string::npos) {
+                if (!ditemukan) {
+                    cout << "\n[?] Data ditemukan!\n";
+                    tampilkanHeaderTabel();
+                }
+                tampilkanBarisTabel(makanan[i], jumlahDitemukan + 1);
+                jumlahDitemukan++;
+                ditemukan = true;
+            }
+        }
+        
+        if (ditemukan) {
+            tampilkanFooterTabel();
+            cout << "\nTotal ditemukan: " << jumlahDitemukan << " item\n";
         }
     }
     
     if (!ditemukan) {
-        cout << "\n[?] Kode " << kodeCari << " tidak ditemukan!\n";
+        cout << "\n[?] Data tidak ditemukan!\n";
     }
     
     cout << "\n";
@@ -376,6 +616,7 @@ void updateMakanan(data makanan[], int jumlahData) {
     
     int index = -1;
     int kodeInput;
+    bool inputValid = false;
     
     // Loop untuk input kode sampai valid atau user membatalkan
     do {
@@ -388,29 +629,39 @@ void updateMakanan(data makanan[], int jumlahData) {
         tampilkanFooterTabel();
         
         cout << "\nMasukkan kode makanan/minuman yang ingin diupdate (0 untuk batal): ";
-        cin >> kodeInput;
         
-        // Cek jika user ingin membatalkan
-        if (kodeInput == 0) {
-            cout << "\n[!] Update dibatalkan.\n\n";
-            return;
-        }
-        
-        // 1. Cari indeks data yang akan diupdate
-        index = -1;
-        for (int i = 0; i < jumlahData; i++) {
-            if (makanan[i].kode == kodeInput) {
-                index = i;
-                break;
+        // Validasi input kode
+        if (cin >> kodeInput) {
+            inputValid = true;
+            
+            // Cek jika user ingin membatalkan
+            if (kodeInput == 0) {
+                cout << "\n[!] Update dibatalkan.\n\n";
+                return;
             }
+            
+            // 1. Cari indeks data yang akan diupdate
+            index = -1;
+            for (int i = 0; i < jumlahData; i++) {
+                if (makanan[i].kode == kodeInput) {
+                    index = i;
+                    break;
+                }
+            }
+            
+            if (index == -1) {
+                cout << "\n[?] Kode " << kodeInput << " tidak ditemukan! Silakan coba lagi.\n\n";
+                inputValid = false;
+            }
+        } else {
+            // Jika input bukan angka
+            cout << "\n[?] Input tidak valid! Harap masukkan angka.\n\n";
+            cin.clear();
+            cin.ignore(10000, '\n');
+            inputValid = false;
         }
         
-        if (index == -1) {
-            cout << "\n[?] Kode " << kodeInput << " tidak ditemukan! Silakan coba lagi.\n\n";
-            // Loop akan mengulang
-        }
-        
-    } while (index == -1); // Ulangi selama kode belum ditemukan
+    } while (!inputValid); // Ulangi selama input tidak valid
     
     // 2. Tampilkan data saat ini
     cout << "\n--- Data Saat Ini ---\n";
@@ -420,16 +671,31 @@ void updateMakanan(data makanan[], int jumlahData) {
     
     // 3. Menu pilihan field yang ingin diupdate
     int pilihanUpdate;
-    cout << "\nPilih data yang ingin diupdate:\n";
-    cout << "1. Nama\n";
-    cout << "2. Kategori\n";
-    cout << "3. Harga\n";
-    cout << "4. Stock\n";
-    cout << "5. Update Semua Data\n";
-    cout << "0. Batal\n";
-    cout << "-------------------------------------\n";
-    cout << "Masukkan pilihan: ";
-    cin >> pilihanUpdate;
+    bool pilihanValid = false;
+    
+    while (!pilihanValid) {
+        cout << "\nPilih data yang ingin diupdate:\n";
+        cout << "1. Nama\n";
+        cout << "2. Kategori\n";
+        cout << "3. Harga\n";
+        cout << "4. Stock\n";
+        cout << "5. Update Semua Data\n";
+        cout << "0. Batal\n";
+        cout << "-------------------------------------\n";
+        cout << "Masukkan pilihan: ";
+        
+        if (cin >> pilihanUpdate) {
+            if (pilihanUpdate >= 0 && pilihanUpdate <= 5) {
+                pilihanValid = true;
+            } else {
+                cout << "\n[?] Pilihan tidak valid! Pilih 0-5.\n";
+            }
+        } else {
+            cout << "\n[?] Input tidak valid! Harap masukkan angka.\n";
+            cin.clear();
+            cin.ignore(10000, '\n');
+        }
+    }
     
     cin.ignore(); // Membersihkan buffer input
     
@@ -451,18 +717,46 @@ void updateMakanan(data makanan[], int jumlahData) {
         }
         
         case 3: {
-            cout << "\nHarga saat ini: Rp " << makanan[index].harga << endl;
-            cout << "Masukkan harga baru: Rp ";
-            cin >> makanan[index].harga;
-            cout << "\n[?] Harga berhasil diupdate!\n";
+            bool hargaValid = false;
+            while (!hargaValid) {
+                cout << "\nHarga saat ini: Rp " << makanan[index].harga << endl;
+                cout << "Masukkan harga baru: Rp ";
+                
+                if (cin >> makanan[index].harga) {
+                    if (makanan[index].harga >= 0) {
+                        hargaValid = true;
+                        cout << "\n[?] Harga berhasil diupdate!\n";
+                    } else {
+                        cout << "[?] Harga tidak boleh negatif!\n";
+                    }
+                } else {
+                    cout << "[?] Input tidak valid! Harap masukkan angka.\n";
+                    cin.clear();
+                    cin.ignore(10000, '\n');
+                }
+            }
             break;
         }
         
         case 4: {
-            cout << "\nStock saat ini: " << makanan[index].stock << " unit" << endl;
-            cout << "Masukkan stock baru: ";
-            cin >> makanan[index].stock;
-            cout << "\n[?] Stock berhasil diupdate!\n";
+            bool stockValid = false;
+            while (!stockValid) {
+                cout << "\nStock saat ini: " << makanan[index].stock << " unit" << endl;
+                cout << "Masukkan stock baru: ";
+                
+                if (cin >> makanan[index].stock) {
+                    if (makanan[index].stock >= 0) {
+                        stockValid = true;
+                        cout << "\n[?] Stock berhasil diupdate!\n";
+                    } else {
+                        cout << "[?] Stock tidak boleh negatif!\n";
+                    }
+                } else {
+                    cout << "[?] Input tidak valid! Harap masukkan angka.\n";
+                    cin.clear();
+                    cin.ignore(10000, '\n');
+                }
+            }
             break;
         }
         
@@ -474,11 +768,37 @@ void updateMakanan(data makanan[], int jumlahData) {
             cout << "Masukkan kategori baru: ";
             getline(cin, makanan[index].kategori);
             
-            cout << "Masukkan harga baru: Rp ";
-            cin >> makanan[index].harga;
+            bool hargaValid = false;
+            while (!hargaValid) {
+                cout << "Masukkan harga baru: Rp ";
+                if (cin >> makanan[index].harga) {
+                    if (makanan[index].harga >= 0) {
+                        hargaValid = true;
+                    } else {
+                        cout << "[?] Harga tidak boleh negatif!\n";
+                    }
+                } else {
+                    cout << "[?] Input tidak valid! Harap masukkan angka.\n";
+                    cin.clear();
+                    cin.ignore(10000, '\n');
+                }
+            }
             
-            cout << "Masukkan stock baru: ";
-            cin >> makanan[index].stock;
+            bool stockValid = false;
+            while (!stockValid) {
+                cout << "Masukkan stock baru: ";
+                if (cin >> makanan[index].stock) {
+                    if (makanan[index].stock >= 0) {
+                        stockValid = true;
+                    } else {
+                        cout << "[?] Stock tidak boleh negatif!\n";
+                    }
+                } else {
+                    cout << "[?] Input tidak valid! Harap masukkan angka.\n";
+                    cin.clear();
+                    cin.ignore(10000, '\n');
+                }
+            }
             
             cout << "\n[?] Semua data berhasil diupdate!\n";
             break;
@@ -524,8 +844,30 @@ void deleteMakanan(data makanan[], int *jumlahData) {
     tampilkanFooterTabel();
     
     int kodeInput;
-    cout << "\nMasukkan kode makanan/minuman yang ingin dihapus: ";
-    cin >> kodeInput;
+    bool inputValid = false;
+    
+    // Loop untuk validasi input
+    while (!inputValid) {
+        cout << "\nMasukkan kode makanan/minuman yang ingin dihapus (0 untuk batal): ";
+        
+        // Cek apakah input valid (angka)
+        if (cin >> kodeInput) {
+            inputValid = true;
+            
+            // Cek jika user ingin batal
+            if (kodeInput == 0) {
+                cout << "\n[!] Penghapusan dibatalkan.\n\n";
+                return;
+            }
+        } else {
+            // Jika input bukan angka
+            cout << "\n[?] Input tidak valid! Harap masukkan angka.\n";
+            
+            // Bersihkan error state dan buffer input
+            cin.clear();
+            cin.ignore(10000, '\n');
+        }
+    }
     
     int index = -1;
     
@@ -550,8 +892,21 @@ void deleteMakanan(data makanan[], int *jumlahData) {
     
     // Konfirmasi penghapusan
     char konfirmasi;
-    cout << "\nApakah Anda yakin ingin menghapus data ini? (y/n): ";
-    cin >> konfirmasi;
+    bool konfirmasiValid = false;
+    
+    while (!konfirmasiValid) {
+        cout << "\nApakah Anda yakin ingin menghapus data ini? (y/n): ";
+        cin >> konfirmasi;
+        
+        if (konfirmasi == 'y' || konfirmasi == 'Y' || 
+            konfirmasi == 'n' || konfirmasi == 'N') {
+            konfirmasiValid = true;
+        } else {
+            cout << "[?] Input tidak valid! Masukkan 'y' atau 'n'.\n";
+            cin.clear();
+            cin.ignore(10000, '\n');
+        }
+    }
     
     if (konfirmasi != 'y' && konfirmasi != 'Y') {
         cout << "\n[!] Penghapusan dibatalkan.\n\n";
@@ -571,7 +926,259 @@ void deleteMakanan(data makanan[], int *jumlahData) {
 }
 
 // ===================================
-// Fungsi SAVE DATA ke File (Format Rapi)
+// Fungsi Helper untuk mendapatkan tanggal hari ini
+// ===================================
+string getTanggalHariIni() {
+    time_t now = time(0);
+    tm *ltm = localtime(&now);
+    
+    char buffer[20];
+    sprintf(buffer, "%02d-%02d-%04d", 
+            ltm->tm_mday, 
+            1 + ltm->tm_mon, 
+            1900 + ltm->tm_year);
+    
+    return string(buffer);
+}
+
+// ===================================
+// Fungsi Helper untuk mendapatkan bulan ini
+// ===================================
+string getBulanIni() {
+    time_t now = time(0);
+    tm *ltm = localtime(&now);
+    
+    char buffer[20];
+    sprintf(buffer, "%02d-%04d", 
+            1 + ltm->tm_mon, 
+            1900 + ltm->tm_year);
+    
+    return string(buffer);
+}
+
+// ===================================
+// Fungsi untuk cek dan reset pendapatan jika perlu
+// ===================================
+void cekDanResetPendapatan() {
+    string tanggalSekarang = getTanggalHariIni();
+    string bulanSekarang = getBulanIni();
+    
+    // Jika tanggal berbeda, reset pendapatan harian
+    if (pendapatan.tanggalTerakhir != tanggalSekarang) {
+        pendapatan.totalHariIni = 0;
+        pendapatan.tanggalTerakhir = tanggalSekarang;
+    }
+    
+    // Jika bulan berbeda, reset pendapatan bulanan
+    if (pendapatan.bulanTerakhir != bulanSekarang) {
+        pendapatan.totalBulanIni = 0;
+        pendapatan.bulanTerakhir = bulanSekarang;
+    }
+}
+
+// ===================================
+// Fungsi PENJUALAN
+// ===================================
+void penjualanMakanan(data makanan[], int jumlahData) {
+    clearScreen();
+    cout << "\n=============== TRANSAKSI PENJUALAN ===============\n\n";
+    
+    if (jumlahData == 0) {
+        cout << "[!] Tidak ada data untuk dijual!\n\n";
+        return;
+    }
+    
+    // Cek dan reset pendapatan jika perlu
+    cekDanResetPendapatan();
+    
+    char lanjut;
+    int totalTransaksi = 0;
+    
+    do {
+        // Tampilkan data yang ada
+        cout << "\nData yang tersedia:\n";
+        tampilkanHeaderTabel();
+        for (int i = 0; i < jumlahData; i++) {
+            tampilkanBarisTabel(makanan[i], i + 1);
+        }
+        tampilkanFooterTabel();
+        
+        int kodeInput;
+        bool kodeValid = false;
+        
+        // Validasi input kode
+        while (!kodeValid) {
+            cout << "\nMasukkan kode makanan/minuman yang dibeli (0 untuk selesai): ";
+            
+            if (cin >> kodeInput) {
+                kodeValid = true;
+                
+                if (kodeInput == 0) {
+                    break;
+                }
+            } else {
+                cout << "[?] Input tidak valid! Harap masukkan angka.\n";
+                cin.clear();
+                cin.ignore(10000, '\n');
+            }
+        }
+        
+        if (kodeInput == 0) {
+            break;
+        }
+        
+        // Cari data berdasarkan kode
+        int index = -1;
+        for (int i = 0; i < jumlahData; i++) {
+            if (makanan[i].kode == kodeInput) {
+                index = i;
+                break;
+            }
+        }
+        
+        if (index == -1) {
+            cout << "\n[?] Kode " << kodeInput << " tidak ditemukan!\n";
+            continue;
+        }
+        
+        // Cek apakah stock tersedia
+        if (makanan[index].stock == 0) {
+            cout << "\n[?] Stock habis untuk produk " << makanan[index].nama << "!\n";
+            continue;
+        }
+        
+        // Tampilkan info produk
+        cout << "\n--- Produk Dipilih ---\n";
+        cout << "Nama     : " << makanan[index].nama << "\n";
+        cout << "Harga    : Rp " << makanan[index].harga << "\n";
+        cout << "Stock    : " << makanan[index].stock << " unit\n";
+        
+        // Input jumlah pembelian dengan validasi
+        int jumlahBeli;
+        bool jumlahValid = false;
+        
+        while (!jumlahValid) {
+            cout << "\nMasukkan jumlah yang dibeli (0 untuk batal): ";
+            
+            if (cin >> jumlahBeli) {
+                if (jumlahBeli == 0) {
+                    cout << "[!] Pembelian produk ini dibatalkan.\n";
+                    jumlahValid = true;
+                    jumlahBeli = -1; // Tandai sebagai batal
+                } else if (jumlahBeli < 0) {
+                    cout << "[?] Jumlah tidak boleh negatif!\n";
+                } else if (jumlahBeli > makanan[index].stock) {
+                    cout << "[?] Stock tidak cukup! Stock tersedia: " << makanan[index].stock << " unit\n";
+                } else {
+                    jumlahValid = true;
+                }
+            } else {
+                cout << "[?] Input tidak valid! Harap masukkan angka.\n";
+                cin.clear();
+                cin.ignore(10000, '\n');
+            }
+        }
+        
+        // Jika dibatalkan, lanjut ke iterasi berikutnya
+        if (jumlahBeli == -1) {
+            continue;
+        }
+        
+        // Hitung total harga
+        int totalHarga = makanan[index].harga * jumlahBeli;
+        
+        // Update stock
+        makanan[index].stock -= jumlahBeli;
+        
+        // Update pendapatan
+        pendapatan.totalHariIni += totalHarga;
+        pendapatan.totalBulanIni += totalHarga;
+        totalTransaksi += totalHarga;
+        
+        // Konfirmasi transaksi
+        cout << "\n[?] Transaksi berhasil!\n";
+        cout << "--- Detail Transaksi ---\n";
+        cout << "Produk       : " << makanan[index].nama << "\n";
+        cout << "Jumlah       : " << jumlahBeli << " unit\n";
+        cout << "Harga Satuan : Rp " << makanan[index].harga << "\n";
+        cout << "Total Bayar  : Rp " << totalHarga << "\n";
+        cout << "Stock Tersisa: " << makanan[index].stock << " unit\n";
+        cout << "------------------------\n";
+        
+        // Tanya apakah ingin melanjutkan dengan validasi
+        bool lanjutValid = false;
+        while (!lanjutValid) {
+            cout << "\nAda pembelian lagi? (y/n): ";
+            cin >> lanjut;
+            
+            if (lanjut == 'y' || lanjut == 'Y' || 
+                lanjut == 'n' || lanjut == 'N') {
+                lanjutValid = true;
+            } else {
+                cout << "[?] Input tidak valid! Masukkan 'y' atau 'n'.\n";
+                cin.clear();
+                cin.ignore(10000, '\n');
+            }
+        }
+        
+        if (lanjut == 'y' || lanjut == 'Y') {
+            clearScreen();
+            cout << "\n=============== TRANSAKSI PENJUALAN ===============\n";
+        }
+        
+    } while (lanjut == 'y' || lanjut == 'Y');
+    
+    // Tampilkan ringkasan transaksi
+    if (totalTransaksi > 0) {
+        clearScreen();
+        cout << "\n=============== RINGKASAN TRANSAKSI ===============\n\n";
+        cout << "Total Transaksi Sekarang : Rp " << totalTransaksi << "\n";
+        cout << "---------------------------------------------------\n";
+        cout << "Pendapatan Hari Ini      : Rp " << pendapatan.totalHariIni << "\n";
+        cout << "Pendapatan Bulan Ini     : Rp " << pendapatan.totalBulanIni << "\n";
+        cout << "Tanggal                  : " << pendapatan.tanggalTerakhir << "\n";
+        cout << "===================================================\n\n";
+    } else {
+        cout << "\n[!] Tidak ada transaksi dilakukan.\n\n";
+    }
+}
+
+// ===================================
+// Fungsi LAPORAN PENDAPATAN
+// ===================================
+void laporanPendapatan() {
+    clearScreen();
+    cout << "\n=============== LAPORAN PENDAPATAN ===============\n\n";
+    
+    // Cek dan reset pendapatan jika perlu
+    cekDanResetPendapatan();
+    
+    cout << "=================================================\n";
+    cout << "  LAPORAN KEUANGAN TOKO MAKANAN & MINUMAN\n";
+    cout << "=================================================\n\n";
+    
+    cout << "Tanggal Hari Ini    : " << pendapatan.tanggalTerakhir << "\n";
+    cout << "Bulan/Tahun         : " << pendapatan.bulanTerakhir << "\n\n";
+    
+    cout << "-------------------------------------------------\n";
+    cout << "PENDAPATAN HARIAN\n";
+    cout << "-------------------------------------------------\n";
+    cout << "Total Hari Ini      : Rp " << setw(12) << right << pendapatan.totalHariIni << "\n\n";
+    
+    cout << "-------------------------------------------------\n";
+    cout << "PENDAPATAN BULANAN\n";
+    cout << "-------------------------------------------------\n";
+    cout << "Total Bulan Ini     : Rp " << setw(12) << right << pendapatan.totalBulanIni << "\n\n";
+    
+    cout << "=================================================\n";
+    cout << "Catatan:\n";
+    cout << "- Pendapatan harian direset setiap hari (00:00)\n";
+    cout << "- Pendapatan bulanan direset setiap bulan\n";
+    cout << "=================================================\n\n";
+}
+
+// ===================================
+// Fungsi SAVE DATA ke File (Format Rapi - UPDATED)
 // ===================================
 void saveToFile(const data makanan[], int jumlahData) {
     clearScreen();
@@ -582,24 +1189,40 @@ void saveToFile(const data makanan[], int jumlahData) {
         return;
     }
     
-    // Buka file untuk menulis (mode truncate - menimpa file lama)
+    // Cek dan reset pendapatan jika perlu
+    cekDanResetPendapatan();
+    
+    // Buka file untuk menulis
     ofstream file("DataMenuMakanan.txt");
     
-    // Cek apakah file berhasil dibuka
     if (!file.is_open()) {
         cout << "[?] Gagal membuka file DataMenuMakanan.txt!\n\n";
         return;
     }
     
-    // Header file yang menarik
+    // Header file
     file << "===============================================================================\n";
     file << "                       DATA MENU MAKANAN & MINUMAN                            \n";
     file << "===============================================================================\n";
     file << "Total Data: " << jumlahData << " item\n";
-    file << "Tanggal Simpan: " << __DATE__ << " " << __TIME__ << "\n";
+    file << "Tanggal Simpan: " << getTanggalHariIni() << "\n";
     file << "===============================================================================\n\n";
     
-    // Tulis data dalam format yang rapi
+    // Bagian Pendapatan
+    file << "===============================================================================\n";
+    file << "                          LAPORAN KEUANGAN                                    \n";
+    file << "===============================================================================\n";
+    file << "Tanggal Terakhir    : " << pendapatan.tanggalTerakhir << "\n";
+    file << "Bulan/Tahun         : " << pendapatan.bulanTerakhir << "\n";
+    file << "Pendapatan Hari Ini : Rp " << pendapatan.totalHariIni << "\n";
+    file << "Pendapatan Bulan Ini: Rp " << pendapatan.totalBulanIni << "\n";
+    file << "===============================================================================\n\n";
+    
+    // Data Produk
+    file << "===============================================================================\n";
+    file << "                           DATA PRODUK                                        \n";
+    file << "===============================================================================\n\n";
+    
     for (int i = 0; i < jumlahData; i++) {
         file << "--- Data #" << (i + 1) << " ---\n";
         file << "Kode     : " << makanan[i].kode << "\n";
@@ -618,24 +1241,24 @@ void saveToFile(const data makanan[], int jumlahData) {
     file.close();
     
     cout << "[?] Data berhasil disimpan ke file DataMenuMakanan.txt!\n";
-    cout << "Total data tersimpan: " << jumlahData << " item\n\n";
+    cout << "Total data tersimpan: " << jumlahData << " item\n";
+    cout << "Pendapatan tersimpan: Harian Rp " << pendapatan.totalHariIni 
+         << ", Bulanan Rp " << pendapatan.totalBulanIni << "\n\n";
 }
 
 // ===================================
-// Fungsi Helper untuk konversi string ke int (pengganti stoi)
+// Fungsi Helper untuk konversi string ke int
 // ===================================
 int stringToInt(string str) {
     int result = 0;
     int i = 0;
     bool negative = false;
     
-    // Handle tanda negatif
     if (str[0] == '-') {
         negative = true;
         i = 1;
     }
     
-    // Konversi karakter ke integer
     for (; i < str.length(); i++) {
         if (str[i] >= '0' && str[i] <= '9') {
             result = result * 10 + (str[i] - '0');
@@ -646,25 +1269,21 @@ int stringToInt(string str) {
 }
 
 // ===================================
-// Fungsi Helper untuk ekstrak angka dari string
+// Fungsi Helper untuk ekstrak angka
 // ===================================
 int extractNumber(string line, string keyword) {
     size_t pos = line.find(keyword);
     if (pos == string::npos) return 0;
     
-    // Cari posisi setelah keyword
     pos = line.find(":", pos) + 1;
     
-    // Skip spasi
     while (pos < line.length() && line[pos] == ' ') pos++;
     
-    // Skip "Rp" jika ada
     if (line.substr(pos, 2) == "Rp") {
         pos += 2;
         while (pos < line.length() && line[pos] == ' ') pos++;
     }
     
-    // Ekstrak angka
     string numStr = "";
     while (pos < line.length() && line[pos] >= '0' && line[pos] <= '9') {
         numStr += line[pos];
@@ -675,30 +1294,27 @@ int extractNumber(string line, string keyword) {
 }
 
 // ===================================
-// Fungsi Helper untuk ekstrak teks setelah ":"
+// Fungsi Helper untuk ekstrak teks
 // ===================================
 string extractText(string line) {
     size_t pos = line.find(":");
     if (pos == string::npos) return "";
     
     pos += 1;
-    // Skip spasi
     while (pos < line.length() && line[pos] == ' ') pos++;
     
     return line.substr(pos);
 }
 
 // ===================================
-// Fungsi LOAD DATA dari File (Format Rapi - C++ Lama)
+// Fungsi LOAD DATA dari File (UPDATED)
 // ===================================
 void loadFromFile(data makanan[], int *jumlahData, int maxSize) {
     clearScreen();
     cout << "\n=============== MUAT DATA DARI FILE ===============\n\n";
     
-    // Buka file untuk membaca
     ifstream file("DataMenuMakanan.txt");
     
-    // Cek apakah file ada dan bisa dibuka
     if (!file.is_open()) {
         cout << "[!] File DataMenuMakanan.txt tidak ditemukan!\n";
         cout << "[!] Pastikan file ada di folder yang sama dengan program.\n\n";
@@ -707,81 +1323,101 @@ void loadFromFile(data makanan[], int *jumlahData, int maxSize) {
     
     string line;
     int berhasil = 0;
+    bool pendapatanLoaded = false;
     
-    // Skip header (5 baris pertama)
+    // Skip header awal (5 baris)
     for (int i = 0; i < 5; i++) {
         getline(file, line);
     }
     
     // Baca data
-    while (berhasil < maxSize && getline(file, line)) {
-        // Cek apakah ini adalah baris "--- Data #X ---"
-        if (line.find("--- Data #") != string::npos) {
+    while (getline(file, line)) {
+        // Cek bagian Laporan Keuangan
+        if (!pendapatanLoaded && line.find("LAPORAN KEUANGAN") != string::npos) {
+            getline(file, line); // Skip garis
             
-            // Baca Kode
+            // Baca Tanggal Terakhir
+            if (getline(file, line) && line.find("Tanggal Terakhir") != string::npos) {
+                pendapatan.tanggalTerakhir = extractText(line);
+            }
+            
+            // Baca Bulan/Tahun
+            if (getline(file, line) && line.find("Bulan/Tahun") != string::npos) {
+                pendapatan.bulanTerakhir = extractText(line);
+            }
+            
+            // Baca Pendapatan Hari Ini
+            if (getline(file, line) && line.find("Pendapatan Hari Ini") != string::npos) {
+                pendapatan.totalHariIni = extractNumber(line, "Pendapatan Hari Ini");
+            }
+            
+            // Baca Pendapatan Bulan Ini
+            if (getline(file, line) && line.find("Pendapatan Bulan Ini") != string::npos) {
+                pendapatan.totalBulanIni = extractNumber(line, "Pendapatan Bulan Ini");
+            }
+            
+            pendapatanLoaded = true;
+            
+            // Cek apakah perlu reset
+            cekDanResetPendapatan();
+            continue;
+        }
+        
+        // Cek bagian Data Produk
+        if (line.find("--- Data #") != string::npos && berhasil < maxSize) {
+            
             if (getline(file, line) && line.find("Kode") != string::npos) {
                 makanan[berhasil].kode = extractNumber(line, "Kode");
             } else break;
             
-            // Baca Nama
             if (getline(file, line) && line.find("Nama") != string::npos) {
                 makanan[berhasil].nama = extractText(line);
             } else break;
             
-            // Baca Kategori
             if (getline(file, line) && line.find("Kategori") != string::npos) {
                 makanan[berhasil].kategori = extractText(line);
             } else break;
             
-            // Baca Harga
             if (getline(file, line) && line.find("Harga") != string::npos) {
                 makanan[berhasil].harga = extractNumber(line, "Harga");
             } else break;
             
-            // Baca Stock
             if (getline(file, line) && line.find("Stock") != string::npos) {
                 makanan[berhasil].stock = extractNumber(line, "Stock");
             } else break;
             
             berhasil++;
-            
-            // Skip garis pemisah
-            getline(file, line);
+            getline(file, line); // Skip garis pemisah
         }
     }
     
     file.close();
-    
     *jumlahData = berhasil;
     
     if (berhasil > 0) {
-        cout << "[?] Data berhasil dimuat dari file DataMenuMakanan.txt!\n";
-        cout << "Total data dimuat: " << berhasil << " item\n\n";
+        cout << "[?] Data berhasil dimuat dari file!\n";
+        cout << "Total data: " << berhasil << " item\n";
+        cout << "Pendapatan Hari Ini: Rp " << pendapatan.totalHariIni << "\n";
+        cout << "Pendapatan Bulan Ini: Rp " << pendapatan.totalBulanIni << "\n\n";
         
-        // Tampilkan preview data yang dimuat
         cout << "Preview data:\n";
         tampilkanHeaderTabel();
-        int preview = (berhasil < 5) ? berhasil : 5; // Tampilkan max 5 data
+        int preview = berhasil;
         for (int i = 0; i < preview; i++) {
             tampilkanBarisTabel(makanan[i], i + 1);
         }
         tampilkanFooterTabel();
         
-        if (berhasil > 5) {
-            cout << "... dan " << (berhasil - 5) << " data lainnya\n";
-        }
     } else {
-        cout << "[?] Gagal membaca data dari file!\n";
-        cout << "[!] Periksa format file DataMenuMakanan.txt\n\n";
+        cout << "[?] Gagal membaca data dari file!\n\n";
     }
 }
 
-// ===================================
-// MAIN FUNCTION
-// ===================================
+// Main Function
+// Main Function dengan Error Handling
 int main() {
     int pilihan;
-
+    
     do {
         cout << "\n=====================================\n";
         cout << "   SISTEM MANAJEMEN MENU MAKANAN     \n";
@@ -792,60 +1428,76 @@ int main() {
         cout << "4. Update Menu Berdasarkan Kode (UPDATE)\n";
         cout << "5. Tambah Data Baru (CREATE)\n";
         cout << "6. Urutkan Data (SORT)\n";
-        cout << "7. Simpan Data ke File (SAVE)\n";        
-        cout << "8. Muat Data dari File (LOAD)\n";        
-        cout << "9. Keluar\n";                             
+        cout << "7. Transaksi Penjualan (SELL)\n";
+        cout << "8. Laporan Pendapatan (REPORT)\n";
+        cout << "9. Simpan Data ke File (SAVE)\n";
+        cout << "10. Muat Data dari File (LOAD)\n";
+        cout << "11. Keluar\n";
         cout << "-------------------------------------\n";
         cout << "Masukkan pilihan Anda: ";
         cin >> pilihan;
-
+        
+        // Error Handling: Cek jika input bukan angka (misalnya string)
+        if (cin.fail()) {
+            cout << "\n[?] ERROR: Input tidak valid! Harap masukkan angka (1-11).\n";
+            
+            // Clear error flag pada cin
+            cin.clear();
+            
+            // Buang semua karakter invalid di buffer sampai newline
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            
+            // Set pilihan ke nilai invalid agar tidak masuk ke case manapun
+            pilihan = -1;
+            continue; // Lanjut ke iterasi berikutnya (tampilkan menu lagi)
+        }
+        
+        // Buang karakter newline yang tersisa setelah input valid
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        
         switch (pilihan) {
             case 1:
                 read(makanan, jumlahData);
                 break;
-            
             case 2:
                 searchKode(makanan, jumlahData);
                 break;
-
             case 3:
                 deleteMakanan(makanan, &jumlahData);
                 break;
-
             case 4:
                 updateMakanan(makanan, jumlahData);
                 break;
-            
             case 5:
                 createMakanan(makanan, &jumlahData, MAX_DATA);
                 break;
-            
             case 6:
                 sortMakanan(makanan, jumlahData);
                 break;
-            
-            case 7:                                     
+            case 7:
+                penjualanMakanan(makanan, jumlahData);
+                break;
+            case 8:
+                laporanPendapatan();
+                break;
+            case 9:
                 saveToFile(makanan, jumlahData);
                 break;
-            
-            case 8:                                     
+            case 10:
                 loadFromFile(makanan, &jumlahData, MAX_DATA);
                 break;
-                
-            case 9:                                      
+            case 11:
                 clearScreen();
                 cout << "\n=====================================\n";
                 cout << "  Terima kasih telah menggunakan\n";
                 cout << "  Sistem Manajemen Menu Makanan!\n";
                 cout << "=====================================\n\n";
                 break;
-
             default:
-                cout << "\n[?] Pilihan tidak valid. Silakan coba lagi.\n";
+                cout << "\n[?] Pilihan tidak valid! Harap pilih angka 1-11.\n";
                 break;
         }
-
-    } while (pilihan != 9);  
-
+    } while (pilihan != 11);
+    
     return 0;
 }
